@@ -1,70 +1,70 @@
-# ksh - Plugin Zsh hỗ trợ SSH nhanh 
+# ksh - Fast SSH Zsh Plugin
 
-**ksh** là một plugin Oh My Zsh giúp quản lý và kết nối SSH nhanh chóng đến các server. Sử dụng Python để đồng bộ instance từ AWS.
+**ksh** is an Oh My Zsh plugin that helps manage and connect to SSH servers quickly. It uses Python to synchronize instances from AWS.
 
-## Tính năng
+## Features
 
-### 🚀 Kết nối thông minh
-- **Tìm kiếm mờ (Fuzzy Search):** Sử dụng `fzf` để tìm kiếm server theo Alias hoặc IP cực nhanh.
-- **Hỗ trợ Jump Host:** Dễ dàng kết nối qua jump host chỉ với một lệnh.
-- **Tương thích:** Tự động đọc và parse `~/.ssh/config` hiện có.
+### 🚀 Smart Connection
+- **Fuzzy Search:** Uses `fzf` to search for servers by Alias or IP extremely fast.
+- **Jump Host Support:** Easily connect via a jump host with just one command.
+- **Compatibility:** Automatically reads and parses existing `~/.ssh/config`.
 
-### ☁️ Đồng bộ AWS EC2 (Siêu tốc)
-- **Parallel Sync:** Quét tất cả AWS Regions song song, giảm thời gian đồng bộ từ phút xuống giây.
-- **Tự động hóa:** Tự động tạo file config (`~/.ssh/ksh_ec2_config`) và include vào file chính.
-- **Linh hoạt:** Cấu hình lọc server theo tên (Regex), loại trừ Spot instance, ưu tiên Private IP, v.v.
+### ☁️ AWS EC2 Sync (Ultra Fast)
+- **Parallel Sync:** Scans all AWS Regions in parallel, reducing sync time from minutes to seconds.
+- **Automation:** Automatically checks and generates the config file (`~/.ssh/ksh_ec2_config`) and includes it in the main config.
+- **Flexibility:** Filter servers by name (Regex), exclude Spot instances, prioritize Private IPs, etc.
 
 ---
 
-## Cài đặt
+## Installation
 
-### Yêu cầu
+### Requirements
 - **Zsh** & **Oh My Zsh**
-- **AWS CLI** (đã cấu hình `aws configure`)
+- **AWS CLI** (configured with `aws configure`)
 - **Python 3**
-- **fzf** (khuyên dùng để có trải nghiệm tốt nhất)
+- **fzf**
 
-### Cài đặt Plugin
-1. Clone repository vào thư mục plugin của Oh My Zsh:
+### Plugin Installation
+1. Clone the repository into your Oh My Zsh plugins directory:
    ```bash
    git clone https://github.com/phankhanhpvk/ksh.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/ksh
    ```
 
-2. Thêm `ksh` vào danh sách plugins trong `~/.zshrc`:
+2. Add `ksh` to the plugins list in `~/.zshrc`:
    ```zsh
    plugins=(... ksh)
    ```
 
-3. Reload lại shell:
+3. Reload the shell:
    ```bash
    source ~/.zshrc
    ```
 
 ---
 
-## Sử dụng
+## Usage
 
-### 1. Kết nối SSH
-Sử dụng lệnh `ksh` để tìm kiếm và kết nối:
+### 1. SSH Connection
+Use the `ksh` command to search and connect:
 
 ```bash
-ksh [tên-server-hoặc-ip]
+ksh [server-name-or-ip]
 ```
 
-- Nếu không nhập tham số: Mở giao diện tìm kiếm `fzf`.
-- Nếu nhập tham số: Tìm chính xác hoặc gần đúng server đầu tiên.
+- If no argument is provided: Opens the `fzf` search interface.
+- If an argument is provided: Connects to the exact or first matching server.
 
-### 2. Kết nối qua Jump Host
-Sử dụng `kshj` hoặc `ksh --jump` để kết nối thông qua Jump Host (mặc định là `sb-monitor`):
+### 2. Connect via Jump Host
+Use `kshj` or `ksh --jump` to connect via a Jump Host (default is `sb-monitor`):
 
 ```bash
 kshj my-private-server
 ```
 
-*(Lưu ý: Cần đảm bảo host `sb-monitor` đã được định nghĩa trong ssh config của bạn)*
+*(Note: Ensure the host `sb-monitor` is defined in your ssh config)*
 
-### 3. (Optional) fzf
-Để có trải nghiệm tìm kiếm tốt nhất, hãy cài đặt `fzf`. Plugin sẽ tự động sử dụng `fzf` nếu có.
+### 3. Install fzf
+This plugin requires `fzf` to function correctly. Please install it:
 
 ```bash
 # MacOS
@@ -74,30 +74,28 @@ brew install fzf
 sudo apt-get install fzf
 ```
 
-
-
-### 4. Đồng bộ EC2 (Sync)
-Lệnh đồng bộ danh sách server từ AWS:
+### 4. Sync EC2 (Sync)
+Command to coordinate server list from AWS:
 
 ```bash
 ksh --sync
 ```
 
-### Cấu hình Sync (trong `~/.zshrc`)
+### Sync Configuration (in `~/.zshrc`)
 
-Bạn có thể tùy chỉnh hành vi sync bằng các biến môi trường sau:
+You can customize sync behavior using the following environment variables:
 
-| Biến Môi Trường | Mô tả | Ví dụ |
+| Environment Variable | Description | Example |
 | :--- | :--- | :--- |
-| `KSH_JUMP_HOST` | Jump Host mặc định (khi dùng `--jump` hoặc `kshj`) | `sb-monitor` |
-| `KSH_JUMP_HOST_<REGION>` | Jump Host cho region cụ thể (dùng khi jump được bật) | `jump-host-use1` |
-| `KSH_SYNC_NO_SPOT` | Bỏ qua các Spot Instances (True/False) | `true` |
-| `KSH_SYNC_PRIVATE_IP` | Luôn sử dụng Private IP thay vì Public IP | `true` |
-| `KSH_SYNC_EXCLUDE_REGEX` | Regex để loại trừ các server theo tên | `.*(test|dev).*` |
-| `KSH_SYNC_USER` | SSH User mặc định cho các server được sync | `ubuntu` |
-| `KSH_SYNC_PORT` | SSH Port mặc định | `22` |
+| `KSH_JUMP_HOST` | Default Jump Host (when using `--jump` or `kshj`) | `sb-monitor` |
+| `KSH_JUMP_HOST_<REGION>` | Jump Host for a specific region (used when jump is enabled) | `jump-host-use1` |
+| `KSH_SYNC_NO_SPOT` | Ignore Spot Instances (True/False) | `true` |
+| `KSH_SYNC_PRIVATE_IP` | Always use Private IP instead of Public IP | `true` |
+| `KSH_SYNC_EXCLUDE_REGEX` | Regex to exclude servers by name | `.*(test|dev).*` |
+| `KSH_SYNC_USER` | Default SSH User for synced servers | `ubuntu` |
+| `KSH_SYNC_PORT` | Default SSH Port | `22` |
 
-**Ví dụ cấu hình:**
+**Configuration Example:**
 ```zsh
 export KSH_SYNC_NO_SPOT=true
 export KSH_SYNC_USER=ec2-user
@@ -106,15 +104,15 @@ export KSH_SYNC_EXCLUDE_REGEX="^eks-.*"
 
 ---
 
-## Cấu trúc Project
-Plugin được tổ chức theo mô hình module Python hiện đại:
+## Project Structure
+The plugin is organized using a modern Python module model:
 
 ```
 ksh/
-├── ksh.plugin.zsh          # Entry point cho Zsh
+├── ksh.plugin.zsh          # Entry point for Zsh
 └── src/
-    ├── main.py             # Script chính
+    ├── main.py             # Main script
     ├── core/               # Config & Logging
-    ├── providers/          # Các module cloud (AWS)
-    └── utils/              # Tiện ích bổ trợ (SSH Config)
+    ├── providers/          # Cloud modules (AWS)
+    └── utils/              # Helper utilities (SSH Config)
 ```
