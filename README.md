@@ -1,6 +1,6 @@
 # ksh - Plugin Zsh hỗ trợ SSH nhanh 
 
-**ksh** (Khanh SHell) là một plugin Oh My Zsh mạnh mẽ giúp quản lý và kết nối SSH nhanh chóng đến các server. Phiên bản mới nhất sử dụng Python để đồng bộ instance từ AWS với tốc độ cực cao.
+**ksh** là một plugin Oh My Zsh giúp quản lý và kết nối SSH nhanh chóng đến các server. Sử dụng Python để đồng bộ instance từ AWS.
 
 ## Tính năng
 
@@ -27,7 +27,7 @@
 ### Cài đặt Plugin
 1. Clone repository vào thư mục plugin của Oh My Zsh:
    ```bash
-   git clone https://github.com/khanhphan/ksh.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/ksh
+   git clone https://github.com/phankhanhpvk/ksh.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/ksh
    ```
 
 2. Thêm `ksh` vào danh sách plugins trong `~/.zshrc`:
