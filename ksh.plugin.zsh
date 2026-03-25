@@ -1,17 +1,19 @@
 # ------------------------------------------------------------------------------
-# Helper: Resolve 'Include' directives in SSH config
+# Helper: Resolve 'Include' directives in SSH config (recursive, with depth limit)
 # ------------------------------------------------------------------------------
 function _ksh_resolve_includes() {
     local main_config="$1"
+    local depth="${2:-0}"
+    local max_depth=5
     local -a config_files
-    config_files=("$main_config")
 
-    if [[ ! -f "$main_config" ]]; then
+    if [[ ! -f "$main_config" ]] || (( depth >= max_depth )); then
         return
     fi
-    
+
+    config_files=("$main_config")
+
     local include_paths
-    # Parse 'Include' lines
     include_paths=$(grep -i "^Include " "$main_config" | sed 's/^Include //I')
 
     if [[ -n "$include_paths" ]]; then
@@ -19,20 +21,30 @@ function _ksh_resolve_includes() {
         for config_path in ${(z)include_paths}; do
             # Handle tilde expansion
             config_path="${config_path/#\~/$HOME}"
-            
+
             # Handle relative path
             if [[ "$config_path" != /* ]]; then
                 config_path="${main_config:h}/$config_path"
             fi
-            
-            # Add matching files
+
+            # Add matching files and recurse into them
             for f in $~config_path; do
-                [[ -f "$f" ]] && config_files+=("$f")
+                if [[ -f "$f" ]]; then
+                    config_files+=("$f")
+                    # Recurse into included file
+                    local -a nested
+                    nested=($(_ksh_resolve_includes "$f" $(( depth + 1 ))))
+                    # Append nested results (skip the first element which is $f itself)
+                    config_files+=("${nested[@]:1}")
+                fi
             done
         done
     fi
 
-    echo "${config_files[@]}"
+    # Deduplicate while preserving order
+    local -aU unique_files
+    unique_files=("${config_files[@]}")
+    echo "${unique_files[@]}"
 }
 
 # ------------------------------------------------------------------------------
@@ -41,7 +53,7 @@ function _ksh_resolve_includes() {
 function _ksh_list_hosts() {
     local -a files
     files=("$@")
-    
+
     awk '
         function print_entry() {
             if (aliases != "") {
@@ -157,9 +169,9 @@ function ksh() {
         # Parse output from _ksh_list_hosts: alias hostname region
         host_alias=$(echo "$selected_line" | awk '{print $1}')
         host_region=$(echo "$selected_line" | awk '{print $3}')
-        
+
         local ssh_opts=()
-        
+
         # Logic: If jump is enabled (jump_host is set usually to default),
         # try to find a more specific per-region jump host.
         if [[ -n "$jump_host" ]]; then
@@ -167,16 +179,15 @@ function ksh() {
                 # Convert region to env var format: us-east-1 -> US_EAST_1
                 local region_key="${host_region//-/_}"
                 local region_env_var="KSH_JUMP_HOST_${region_key:u}"
-                
+
                 # Zsh indirect expansion to get value
                 local region_specific_jump="${(P)region_env_var}"
-                
+
                 if [[ -n "$region_specific_jump" ]]; then
                     jump_host="$region_specific_jump"
-                    # echo "Using Region Jump Host: $jump_host"
                 fi
             fi
-            
+
             ssh_opts+=(-J "$jump_host")
         fi
 
@@ -184,7 +195,7 @@ function ksh() {
         if [[ -n "$jump_host" ]]; then
              echo "  via \033[1;34m$jump_host\033[0m"
         fi
-        
+
         ssh "${ssh_opts[@]}" "$host_alias"
     fi
 }
@@ -213,15 +224,14 @@ function _ksh_sync_ec2() {
     # Resolve Python script location
     local plugin_dir="${${(%):-%x}:A:h}"
     local python_script="$plugin_dir/src/main.py"
-    
+
     # Check for boto3
-    python3 -c "import boto3" 2>/dev/null
-    if [[ $? -ne 0 ]]; then
+    if ! python3 -c "import boto3" 2>/dev/null; then
         echo "Error: Python library 'boto3' not found."
         echo "Please install it: pip3 install boto3"
         return 1
     fi
-    
+
     if [[ ! -f "$python_script" ]]; then
         echo "Error: Python sync script not found at $python_script"
         return 1
@@ -239,14 +249,38 @@ function _ksh_sync_ec2() {
     # Ensure Include
     local ec2_config_file=~/.ssh/ksh_ec2_config
     local main_config=~/.ssh/config
-    
-    if ! grep -q "Include $ec2_config_file" "$main_config"; then
+
+    if ! grep -q "Include $ec2_config_file" "$main_config" 2>/dev/null; then
         echo "Adding 'Include $ec2_config_file' to header of $main_config"
+
+        # Backup original config before modifying
+        if [[ -f "$main_config" ]]; then
+            cp "$main_config" "${main_config}.bak"
+        fi
+
         local temp_config=$(mktemp)
         echo "Include $ec2_config_file" > "$temp_config"
         if [[ -f "$main_config" ]]; then
             cat "$main_config" >> "$temp_config"
         fi
+
+        # Ensure proper permissions before moving
+        chmod 600 "$temp_config"
         mv "$temp_config" "$main_config"
     fi
 }
+
+# ------------------------------------------------------------------------------
+# Zsh Completion
+# ------------------------------------------------------------------------------
+function _ksh_completion() {
+    local -a hosts
+    if [[ -f ~/.ssh/config ]]; then
+        local -a config_files
+        config_files=($(_ksh_resolve_includes ~/.ssh/config))
+        hosts=($(awk 'tolower($1) == "host" { for (i=2; i<=NF; i++) if ($i !~ /[*?]/) print $i }' "${config_files[@]}" 2>/dev/null | sort -u))
+    fi
+    _describe 'ssh hosts' hosts
+}
+
+compdef _ksh_completion ksh kshj

@@ -1,0 +1,11 @@
+{
+    "include": ["src"],
+    "executionEnvironments": [
+        {
+            "root": "src"
+        }
+    ],
+    "reportMissingImports": true,
+    "reportMissingTypeStubs": false,
+    "pythonVersion": "3.12"
+}
